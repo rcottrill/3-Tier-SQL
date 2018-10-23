@@ -1,4 +1,4 @@
-﻿configuration CreateDC01
+﻿Configuration CreateDCForest
 {
    param
    (
