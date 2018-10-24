@@ -9,7 +9,7 @@
         [Int]$RetryIntervalSec=30
     )
 
-    Import-DscResource -ModuleName  xStorage, xNetworking
+    Import-DscResource -ModuleName  xNetworking
     $Interface=Get-NetAdapter|Where Name -Like "Ethernet*"|Select-Object -First 1
     $InterfaceAlias=$($Interface.Name)
 
