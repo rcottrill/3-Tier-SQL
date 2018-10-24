@@ -1,7 +1,7 @@
-﻿Configuration CreateDCForest
-{
-   param
-   (
+﻿configuration CreateADForest 
+{ 
+   param 
+   ( 
         [Parameter(Mandatory)]
         [String]$DomainName,
 
@@ -10,8 +10,8 @@
 
         [Int]$RetryCount=20,
         [Int]$RetryIntervalSec=30
-    )
-
+    ) 
+    
     Import-DscResource -ModuleName xActiveDirectory, xStorage, xNetworking, PSDesiredStateConfiguration, xPendingReboot
     [System.Management.Automation.PSCredential ]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     $Interface=Get-NetAdapter|Where Name -Like "Ethernet*"|Select-Object -First 1
@@ -19,49 +19,49 @@
 
     Node localhost
     {
-        LocalConfigurationManager
+        LocalConfigurationManager 
         {
             RebootNodeIfNeeded = $true
         }
 
-        WindowsFeature DNS
-        {
-            Ensure = "Present"
-            Name = "DNS"
+	    WindowsFeature DNS 
+        { 
+            Ensure = "Present" 
+            Name = "DNS"		
         }
 
         Script EnableDNSDiags
-        {
-      	    SetScript = {
-                Set-DnsServerDiagnostics -All $true
-                Write-Verbose -Verbose "Enabling DNS client diagnostics"
+	    {
+      	    SetScript = { 
+		        Set-DnsServerDiagnostics -All $true
+                Write-Verbose -Verbose "Enabling DNS client diagnostics" 
             }
             GetScript =  { @{} }
             TestScript = { $false }
-            DependsOn = "[WindowsFeature]DNS"
+	        DependsOn = "[WindowsFeature]DNS"
         }
 
-        WindowsFeature DnsTools
-        {
-            Ensure = "Present"
+	    WindowsFeature DnsTools
+	    {
+	        Ensure = "Present"
             Name = "RSAT-DNS-Server"
             DependsOn = "[WindowsFeature]DNS"
-        }
+	    }
 
-        xDnsServerAddress DnsServerAddress
-        {
-            Address        = '127.0.0.1'
+        xDnsServerAddress DnsServerAddress 
+        { 
+            Address        = '127.0.0.1' 
             InterfaceAlias = $InterfaceAlias
             AddressFamily  = 'IPv4'
-            DependsOn = "[WindowsFeature]DNS"
+	        DependsOn = "[WindowsFeature]DNS"
         }
 
-        WindowsFeature ADDSInstall
-        {
-            Ensure = "Present"
+        WindowsFeature ADDSInstall 
+        { 
+            Ensure = "Present" 
             Name = "AD-Domain-Services"
-            DependsOn="[WindowsFeature]DNS"
-        }
+	        DependsOn="[WindowsFeature]DNS" 
+        } 
 
         WindowsFeature ADDSTools
         {
@@ -74,10 +74,10 @@
         {
             Ensure = "Present"
             Name = "RSAT-AD-AdminCenter"
-            DependsOn = "[WindowsFeature]ADDSTools"
+            DependsOn = "[WindowsFeature]ADDSInstall"
         }
-
-        xADDomain FirstDS
+         
+        xADDomain FirstDS 
         {
             DomainName = $DomainName
             DomainAdministratorCredential = $DomainCreds
@@ -85,13 +85,8 @@
             DatabasePath = "C:\Windows\NTDS"
             LogPath = "C:\Windows\NTDS"
             SysvolPath = "C:\Windows\SYSVOL"
-            DependsOn = @("[WindowsFeature]ADDSInstall")
-        }
-
-        xPendingReboot RebootAfterPromotion{
-            Name = "RebootAfterPromotion"
-            DependsOn = "[xADDomain]FirstDS"
-        }
+	        DependsOn = "[WindowsFeature]ADDSInstall"
+        } 
 
    }
-}
+} 
