@@ -12,7 +12,13 @@
         [String]$DC01IP,
 
         [Parameter(Mandatory)]
+        [String]$SiteCIDR,
+
+        [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$Admincreds,
+
+
+
 
         [Int]$RetryCount=20,
         [Int]$RetryIntervalSec=30
@@ -108,9 +114,23 @@
             DependsOn = "[xADDomain]DC1"
         }
 
+        xADReplicationSite DefaultSite{
+            Name = "Azure"
+            Ensure = "Present"
+            RenameDefaultFirstSiteName = "true"
+            DependsOn = "[xADDomain]DC1"
+        }
+
+         xADReplicationSubnet Azure{
+            Name = $SiteCIDR
+            Site = "Azure"
+            Ensure = "Present"
+            DependsOn = "[xADReplicationSite]DefaultSite"
+        }
+
         xPendingReboot RebootAfterPromotion{
             Name = "RebootAfterPromotion"
-            DependsOn = "[xADDomain]DC1"
+            DependsOn = "[xADReplicationSubnet]Azure"
         }
 
    }

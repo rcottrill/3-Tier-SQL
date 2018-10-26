@@ -97,21 +97,5 @@
             Name = "RebootAfterDCPromotion"
             DependsOn = "[xADDomainController]DC2"
         }
-
-        Script UpdateADSite
-        {
-            SetScript =
-            {
-                Write-Verbose -Verbose "Renaiming Defalt Site.." 
-                Get-ADObject -Credential $DomainCreds -Identity “CN=Default-First-Site-Name,CN=Sites,$((Get-ADRootDSE).ConfigurationNamingContext)" | Rename-ADObject -NewName Azure -Credential $DomainCreds
-                New-ADReplicationSubnet -Name "10.0.1.0/24" -Site Azure -Location "Azure Cloud" -Credential $DomainCreds
-                Write-Verbose -Verbose "Finished Renaiming Defalt Site.."
-            }
-            GetScript =  { @{} }
-            TestScript = {$false}
-            DependsOn = "[xPendingReboot]RebootAfterPromotion"
-        }
-
-    }
 }
 
