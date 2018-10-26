@@ -118,7 +118,7 @@
         xADReplicationSite DefaultSite{
             Name = "Azure"
             Ensure = "Present"
-            RenameDefaultFirstSiteName = "true"
+            RenameDefaultFirstSiteName = $true
             DependsOn = "[xADDomain]DC1"
         }
 
