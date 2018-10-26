@@ -97,5 +97,8 @@
             Name = "RebootAfterDCPromotion"
             DependsOn = "[xADDomainController]DC2"
         }
+
+
+    }
 }
 
