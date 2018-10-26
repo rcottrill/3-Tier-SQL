@@ -18,7 +18,13 @@
         [Int]$RetryIntervalSec=30
     )
 
-    Import-DscResource -ModuleName xActiveDirectory, xPendingReboot, xNetworking
+    try {
+   Install-Module xActiveDirectory -Confirm:$false -SkipPublisherCheck -force;
+   Install-Module xNetworking -Confirm:$false -SkipPublisherCheck -force;
+   Install-Module xPendingReboot -Confirm:$false -SkipPublisherCheck -force;
+    } Catch {
+   Import-DscResource -ModuleName xActiveDirectory, xNetworking, xPendingReboot
+    }
 
     [System.Management.Automation.PSCredential ]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     $Interface=Get-NetAdapter|Where Name -Like "Ethernet*"|Select-Object -First 1
