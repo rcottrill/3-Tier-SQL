@@ -105,7 +105,7 @@
             }
             GetScript =  { @{} }
             TestScript = {$false}
-            DependsOn = "[xADDomainController]DC1"
+            DependsOn = "[xADDomain]DC1"
         }
 
         xPendingReboot RebootAfterPromotion{
