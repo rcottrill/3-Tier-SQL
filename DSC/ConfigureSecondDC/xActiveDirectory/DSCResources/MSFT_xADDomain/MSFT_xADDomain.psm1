@@ -1,9 +1,3 @@
-## Import the common AD functions
-$adCommonFunctions = Join-Path `
-    -Path (Split-Path -Path $PSScriptRoot -Parent) `
-    -ChildPath '\MSFT_xADCommon\MSFT_xADCommon.psm1'
-Import-Module -Name $adCommonFunctions
-
 # Localized messages
 data localizedData
 {
@@ -13,7 +7,7 @@ data localizedData
         InvalidDomainError                   = Computer is a member of the wrong domain?!
         ExistingDomainMemberError            = Computer is already a domain member. Cannot create a new '{0}' domain?
         InvalidCredentialError               = Domain '{0}' is available, but invalid credentials were supplied.
-
+                                             
         QueryDomainWithLocalCredential       = Computer is a domain member; querying domain '{0}' using local credential ...
         QueryDomainWithCredential            = Computer is a workgroup member; querying for domain '{0}' using supplied credential ...
         DomainFound                          = Active Directory domain '{0}' found.
@@ -27,7 +21,7 @@ data localizedData
         ResourceNotInDesiredState            = Resource '{0}' is NOT in the desired state.
         RetryingGetADDomain                  = Attempt {0} of {1} to call Get-ADDomain failed, retrying in {2} seconds.
         UnhandledError                       = Unhandled error occured, detail here: {0}
-        FaultExceptionAndDomainShouldExist   = ServiceModel FaultException detected and domain should exist, performing retry...
+        FaultExceptionAndDomainShouldExist = ServiceModel FaultException detected and domain should exist, performing retry...
 '@
 }
 
@@ -41,14 +35,14 @@ data localizedData
 
     .NOTES
         The tracking file is currently output to the environment's temp directory.
-
+        
         This file is NOT removed when a configuration completes, so if another call to a xADDomain
         resource with the same domain name occurs in the same environment, this file will already
         be present.
-
+        
         This is so that when another call is made to the same resource, the resource will not
         attempt to promote the machine to a domain controller again (which would cause an error).
-
+        
         If the resource should be promoted to a domain controller once again, you must first remove
         this file from the environment's temp directory (usually C:\Temp).
 
@@ -99,16 +93,10 @@ function Get-TargetResource
         [String] $LogPath,
 
         [Parameter()] [ValidateNotNullOrEmpty()]
-        [String] $SysvolPath,
-
-        [Parameter()] [ValidateSet('Win2008', 'Win2008R2', 'Win2012', 'Win2012R2', 'WinThreshold')]
-        [String] $ForestMode,
-
-        [Parameter()] [ValidateSet('Win2008', 'Win2008R2', 'Win2012', 'Win2012R2', 'WinThreshold')]
-        [String] $DomainMode
+        [String] $SysvolPath
     )
-
-    Assert-Module -ModuleName 'ADDSDeployment' -ImportModule
+    
+    Assert-Module -ModuleName 'ADDSDeployment';
     $domainFQDN = Resolve-DomainFQDN -DomainName $DomainName -ParentDomainName $ParentDomainName;
     $isDomainMember = Test-DomainMember;
 
@@ -116,34 +104,30 @@ function Get-TargetResource
     $maxRetries = 5
     $retryIntervalInSeconds = 30
     $domainShouldExist = (Test-Path (Get-TrackingFilename -DomainName $DomainName))
-    do {
+    do {            
     try
     {
         if ($isDomainMember) {
             ## We're already a domain member, so take the credentials out of the equation
             Write-Verbose ($localizedData.QueryDomainADWithLocalCredentials -f $domainFQDN);
             $domain = Get-ADDomain -Identity $domainFQDN -ErrorAction Stop;
-            $forest = Get-ADForest -Identity $domain.Forest -ErrorAction Stop
         }
         else {
             Write-Verbose ($localizedData.QueryDomainWithCredential -f $domainFQDN);
-            $domain = Get-ADDomain -Identity $domainFQDN -Credential $DomainAdministratorCredential -ErrorAction Stop
-            $forest = Get-ADForest -Identity $domain.Forest -Credential $DomainAdministratorCredential -ErrorAction Stop
+            $domain = Get-ADDomain -Identity $domainFQDN -Credential $DomainAdministratorCredential -ErrorAction Stop;
         }
 
         ## No need to check whether the node is actually a domain controller. If we don't throw an exception,
         ## the domain is already UP - and this resource shouldn't run. Domain controller functionality
         ## should be checked by the xADDomainController resource?
         Write-Verbose ($localizedData.DomainFound -f $domain.DnsRoot);
-
+        
         $targetResource = @{
             DomainName = $domain.DnsRoot;
             ParentDomainName = $domain.ParentDomain;
             DomainNetBIOSName = $domain.NetBIOSName;
-            ForestMode = (ConvertTo-DeploymentForestMode -Mode $forest.ForestMode) -as [String]
-            DomainMode = (ConvertTo-DeploymentDomainMode -Mode $domain.DomainMode) -as [String]
         }
-
+        
         return $targetResource;
     }
     catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException]
@@ -217,13 +201,7 @@ function Test-TargetResource
         [String] $LogPath,
 
         [Parameter()] [ValidateNotNullOrEmpty()]
-        [String] $SysvolPath,
-
-        [Parameter()] [ValidateSet('Win2008', 'Win2008R2', 'Win2012', 'Win2012R2', 'WinThreshold')]
-        [String] $ForestMode,
-
-        [Parameter()]  [ValidateSet('Win2008', 'Win2008R2', 'Win2012', 'Win2012R2', 'WinThreshold')]
-        [String] $DomainMode
+        [String] $SysvolPath
     )
 
     $targetResource = Get-TargetResource @PSBoundParameters
@@ -236,9 +214,9 @@ function Test-TargetResource
     {
         $message = $localizedData.ResourcePropertyValueIncorrect -f 'DomainName', $domainFQDN, $targetResource.DomainName;
         Write-Verbose -Message $message;
-        $isCompliant = $false;
+        $isCompliant = $false;   
     }
-
+    
     $propertyNames = @('ParentDomainName','DomainNetBIOSName');
     foreach ($propertyName in $propertyNames)
     {
@@ -249,11 +227,11 @@ function Test-TargetResource
             {
                 $message = $localizedData.ResourcePropertyValueIncorrect -f $propertyName, $propertyValue, $targetResource.$propertyName;
                 Write-Verbose -Message $message;
-                $isCompliant = $false;
+                $isCompliant = $false;        
             }
         }
     }
-
+        
     if ($isCompliant)
     {
         Write-Verbose -Message ($localizedData.ResourceInDesiredState -f $domainFQDN);
@@ -296,26 +274,20 @@ function Set-TargetResource
         [String] $LogPath,
 
         [Parameter()] [ValidateNotNullOrEmpty()]
-        [String] $SysvolPath,
-
-        [Parameter()] [ValidateSet('Win2008', 'Win2008R2', 'Win2012', 'Win2012R2', 'WinThreshold')]
-        [String] $ForestMode,
-
-        [Parameter()] [ValidateSet('Win2008', 'Win2008R2', 'Win2012', 'Win2012R2', 'WinThreshold')]
-        [String] $DomainMode
+        [String] $SysvolPath
     )
 
     # Debug can pause Install-ADDSForest/Install-ADDSDomain, so we remove it.
-    [ref] $null = $PSBoundParameters.Remove('Debug');
+    [ref] $null = $PSBoundParameters.Remove("Debug");
     ## Not entirely necessary, but run Get-TargetResouece to ensure we raise any pre-flight errors.
     $targetResource = Get-TargetResource @PSBoundParameters;
-
+    
     $installADDSParams = @{
         SafeModeAdministratorPassword = $SafemodeAdministratorPassword.Password;
         NoRebootOnCompletion = $true;
         Force = $true;
     }
-
+    
     if ($PSBoundParameters.ContainsKey('DnsDelegationCredential'))
     {
         $installADDSParams['DnsDelegationCredential'] = $DnsDelegationCredential;
@@ -332,10 +304,6 @@ function Set-TargetResource
     if ($PSBoundParameters.ContainsKey('SysvolPath'))
     {
         $installADDSParams['SysvolPath'] = $SysvolPath;
-    }
-    if ($PSBoundParameters.ContainsKey('DomainMode'))
-    {
-        $installADDSParams['DomainMode'] = $DomainMode;
     }
     
     if ($PSBoundParameters.ContainsKey('ParentDomainName'))
@@ -360,20 +328,20 @@ function Set-TargetResource
         {
             $installADDSParams['DomainNetbiosName'] = $DomainNetBIOSName;
         }
-        if ($PSBoundParameters.ContainsKey('ForestMode'))
-        {
-            $installADDSParams['ForestMode'] = $ForestMode
-        }
         Install-ADDSForest @installADDSParams;
-        Write-Verbose -Message ($localizedData.CreatedForest -f $DomainName);
-    }
+        Write-Verbose -Message ($localizedData.CreatedForest -f $DomainName); 
+    }  
 
-    'Finished' | Out-File -FilePath (Get-TrackingFilename -DomainName $DomainName) -Force
+    "Finished" | Out-File -FilePath (Get-TrackingFilename -DomainName $DomainName) -Force
 
     # Signal to the LCM to reboot the node to compensate for the one we
     # suppressed from Install-ADDSForest/Install-ADDSDomain
     $global:DSCMachineStatus = 1
 
 } #end function Set-TargetResource
+
+## Import the common AD functions
+$adCommonFunctions = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath '\MSFT_xADCommon\MSFT_xADCommon.ps1';
+. $adCommonFunctions;
 
 Export-ModuleMember -Function *-TargetResource;

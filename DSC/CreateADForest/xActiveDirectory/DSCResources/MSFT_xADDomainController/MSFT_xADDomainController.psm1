@@ -3,12 +3,6 @@
 # Directory.
 #
 
-## Import the common AD functions
-$adCommonFunctions = Join-Path `
-    -Path (Split-Path -Path $PSScriptRoot -Parent) `
-    -ChildPath '\MSFT_xADCommon\MSFT_xADCommon.psm1'
-Import-Module -Name $adCommonFunctions
-
 function Get-TargetResource
 {
     [OutputType([System.Collections.Hashtable])]
@@ -222,5 +216,9 @@ function Test-TargetResource
     $isCompliant
 
 }
+
+## Import the common AD functions
+$adCommonFunctions = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath '\MSFT_xADCommon\MSFT_xADCommon.ps1'
+. $adCommonFunctions
 
 Export-ModuleMember -Function *-TargetResource
