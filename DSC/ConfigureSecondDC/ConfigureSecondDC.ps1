@@ -3,10 +3,10 @@
    param
     (
         [Parameter(Mandatory)]
-        [String]$DNSServer,
+        [String]$DC01IP,
 
          [Parameter(Mandatory)]
-        [String]$OwnIP,
+        [String]$DC02IP,
 
         [Parameter(Mandatory)]
         [String]$DomainName,
@@ -54,7 +54,7 @@
 
         xDnsServerAddress DnsServerAddress
         {
-            Address        = $DNSServer, $OwnIP
+            Address        = $DC01IP, $DC02IP
             InterfaceAlias = $InterfaceAlias
             AddressFamily  = 'IPv4'
             DependsOn="[WindowsFeature]ADDSInstall"
@@ -84,8 +84,8 @@
             SetScript =
             {
                 Write-Verbose -Verbose "Getting DNS forwarding rule..."
-                Add-DnsServerForwarder -IPAddress $DNSServer -PassThru
-                Add-DnsServerForwarder -IPAddress $OwnIP -PassThru
+                Add-DnsServerForwarder -IPAddress '8.8.8.8' -PassThru
+                Add-DnsServerForwarder -IPAddress '8.8.4.4' -PassThru
                 Write-Verbose -Verbose "End of UpdateDNSForwarder script..."
             }
             GetScript =  { @{} }
@@ -98,5 +98,20 @@
             DependsOn = "[xADDomainController]DC2"
         }
 
+        Script UpdateADSite
+        {
+            SetScript =
+            {
+                Write-Verbose -Verbose "Renaiming Defalt Site.."
+                Get-ADObject -Identity “CN=Default-First-Site-Name,CN=Sites,$((Get-ADRootDSE).ConfigurationNamingContext)" | Rename-ADObject -NewName Azure
+                New-ADReplicationSubnet -Name "10.0.1.0/24" -Site Azure -Location "Azure Cloud"
+                Write-Verbose -Verbose "Finished Renaiming Defalt Site.."
+            }
+            GetScript =  { @{} }
+            TestScript = {$false}
+            DependsOn = "[xPendingReboot]RebootAfterPromotion"
+        }
+
     }
 }
+

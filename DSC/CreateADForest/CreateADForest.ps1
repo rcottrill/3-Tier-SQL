@@ -6,6 +6,12 @@
         [String]$DomainName,
 
         [Parameter(Mandatory)]
+        [String]$DC02IP,
+
+        [Parameter(Mandatory)]
+        [String]$DC01IP,
+
+        [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$Admincreds,
 
         [Int]$RetryCount=20,
@@ -50,7 +56,7 @@
 
         xDnsServerAddress DnsServerAddress
         {
-            Address        = '127.0.0.1'
+            Address        = $DC01IP, $DC02IP
             InterfaceAlias = $InterfaceAlias
             AddressFamily  = 'IPv4'
             DependsOn = "[WindowsFeature]DNS"
@@ -77,7 +83,7 @@
             DependsOn = "[WindowsFeature]ADDSTools"
         }
 
-        xADDomain FirstDS
+        xADDomain DC1
         {
             DomainName = $DomainName
             DomainAdministratorCredential = $DomainCreds
@@ -88,9 +94,23 @@
             DependsOn = @("[WindowsFeature]ADDSInstall")
         }
 
+           Script UpdateDNSForwarder
+        {
+            SetScript =
+            {
+                Write-Verbose -Verbose "Getting DNS forwarding rule..."
+                Add-DnsServerForwarder -IPAddress '8.8.8.8' -PassThru
+                Add-DnsServerForwarder -IPAddress '8.8.4.4' -PassThru
+                Write-Verbose -Verbose "End of UpdateDNSForwarder script..."
+            }
+            GetScript =  { @{} }
+            TestScript = {$false}
+            DependsOn = "[xADDomainController]DC1"
+        }
+
         xPendingReboot RebootAfterPromotion{
             Name = "RebootAfterPromotion"
-            DependsOn = "[xADDomain]FirstDS"
+            DependsOn = "[xADDomain]DC1"
         }
 
    }
