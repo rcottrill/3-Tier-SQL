@@ -1,4 +1,4 @@
-﻿configuration CreateADForest
+﻿configuration ConfigureADServers
 {
    param
    (
