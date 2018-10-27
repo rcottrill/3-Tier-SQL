@@ -15,6 +15,9 @@
         [String]$SiteCIDR,
 
         [Parameter(Mandatory)]
+        [String]$VMRole,
+
+        [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$Admincreds,
 
 
@@ -27,10 +30,11 @@
    Import-DscResource -ModuleName xActiveDirectory, xNetworking, xPendingReboot
 
     [System.Management.Automation.PSCredential ]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
+    
     $Interface=Get-NetAdapter|Where Name -Like "Ethernet*"|Select-Object -First 1
     $InterfaceAlias=$($Interface.Name)
 
-    Node localhost
+    Node $AllNodes.Where{$VMRole -eq "FirstDC"}.Nodename
     {
         LocalConfigurationManager
         {
@@ -135,4 +139,81 @@
         }
 
    }
+
+   Node $AllNodes.Where{$VMRole -eq "DCReplica"}.Nodename
+    {
+        LocalConfigurationManager
+        {
+            RebootNodeIfNeeded = $true
+        }
+
+        WindowsFeature ADDSInstall
+        {
+            Ensure = "Present"
+            Name = "AD-Domain-Services"
+        }
+
+        WindowsFeature ADDSTools
+        {
+            Ensure = "Present"
+            Name = "RSAT-ADDS-Tools"
+            DependsOn = "[WindowsFeature]ADDSInstall"
+        }
+
+        WindowsFeature ADAdminCenter
+        {
+            Ensure = "Present"
+            Name = "RSAT-AD-AdminCenter"
+            DependsOn = "[WindowsFeature]ADDSTools"
+        }
+
+        xDnsServerAddress DnsServerAddress
+        {
+            Address        = $DC01IP, $DC02IP
+            InterfaceAlias = $InterfaceAlias
+            AddressFamily  = 'IPv4'
+            DependsOn="[WindowsFeature]ADDSInstall"
+        }
+
+        xWaitForADDomain DscForestWait
+        {
+            DomainName = $DomainName
+            DomainUserCredential= $DomainCreds
+            RetryCount = $RetryCount
+            RetryIntervalSec = $RetryIntervalSec
+        }
+
+        xADDomainController DC2
+        {
+            DomainName = $DomainName
+            DomainAdministratorCredential = $DomainCreds
+            SafemodeAdministratorPassword = $DomainCreds
+            DatabasePath = "C:\Windows\NTDS"
+            LogPath = "C:\Windows\NTDS"
+            SysvolPath = "C:\Windows\SYSVOL"
+            DependsOn = "[xWaitForADDomain]DscForestWait"
+        }
+
+        Script UpdateDNSForwarder
+        {
+            SetScript =
+            {
+                Write-Verbose -Verbose "Getting DNS forwarding rule..."
+                Add-DnsServerForwarder -IPAddress '8.8.8.8' -PassThru
+                Add-DnsServerForwarder -IPAddress '8.8.4.4' -PassThru
+                Write-Verbose -Verbose "End of UpdateDNSForwarder script..."
+            }
+            GetScript =  { @{} }
+            TestScript = {$false}
+            DependsOn = "[xADDomainController]DC2"
+        }
+
+        xPendingReboot RebootAfterPromotion {
+            Name = "RebootAfterDCPromotion"
+            DependsOn = "[xADDomainController]DC2"
+        }
+
+
+    }
+
 }
