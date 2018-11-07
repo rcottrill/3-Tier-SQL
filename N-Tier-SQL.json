@@ -129,9 +129,10 @@
         },
         "SQLClusterName": {
             "type": "string",
-            "defaultValue": "DEMOSQLCLuster",
+            "defaultValue": "SQLCLuster",
+            "maxLength": 10,
             "metadata": {
-                "description": "The SQL Cluster name to be created."
+                "description": "The SQL Cluster name to be created. Max 10"
             }
         },
         "SQLReplicas": {
@@ -203,7 +204,7 @@
         "ADsubnetPrefixSplit": "[split(replace(variables('ADsubnetPrefix'),'/','.'),'.')]",
         "DTsubnetPrefixSplit": "[split(replace(variables('DTsubnetPrefix'),'/','.'),'.')]",
         "virtualNetworkName": "[concat(parameters('VnetName'), '-vnet01')]",
-        "diagnosticStorageAccountName": "[concat('diagst', uniqueString(resourceGroup().id))]",
+        "diagnosticStorageAccountName": "[toLower(concat('diagst', uniqueString(resourceGroup().id)))]",
         "jb01nicName": "[concat(parameters('jbvmName'),'-nic')]",
         "jb01PIP": "[concat(parameters('jbvmName'), '-pip')]",
         "DC01Name": "[concat(parameters('DCNamePrefix'),'-01')]",
@@ -218,8 +219,7 @@
         "SQL01IP" : "[concat(variables('DTsubnetPrefixSplit')[0],'.',variables('DTsubnetPrefixSplit')[1],'.',variables('DTsubnetPrefixSplit')[2],'.', add(int(variables('DTsubnetPrefixSplit')[3]),4))]",
         "SQLRepName" : "[concat(parameters('SQLNamePrefix'),'-0')]",
         "SQLClusterIP" : "[concat(variables('DTsubnetPrefixSplit')[0],'.',variables('DTsubnetPrefixSplit')[1],'.',variables('DTsubnetPrefixSplit')[2],'.',add(int(variables('DTsubnetPrefixSplit')[3]),10))]",
-        "SQLClusterStorageWitnessName" : "[concat(parameters('SQLClusterName'), uniqueString(resourceGroup().id))]",
-        "GitLocation": "https://raw.githubusercontent.com/rcottrill/3-Tier-SQL/master",
+        "SQLClusterStorageWitnessName" : "[toLower(concat(parameters('SQLClusterName'), uniqueString(resourceGroup().id)))]",
         "NSGName": "[concat('NSG-', parameters('VnetName'))]"
     },
     "resources": [
@@ -1038,7 +1038,9 @@
             },
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/', variables('diagnosticStorageAccountName'))]",
-                "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('SQL01Name'), '-nic'))]"
+                "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('SQL01Name'), '-nic'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', variables('DC01Name'))]",
+                "[concat('Microsoft.Compute/virtualMachines/', variables('DC01Name'),'/extensions/ConfigureAD')]"
             ],
             "properties": {
                 "hardwareProfile": {
@@ -1093,52 +1095,131 @@
                         "enabled": true,
                         "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('diagnosticStorageAccountName'))).primaryEndpoints.blob]"
                     }
-                },
-                "resources": [
-                    {
-                        "type": "extensions",
-                        "name": "ConfigureSQLServers",
-                        "apiVersion": "2017-03-30",
-                        "location": "[parameters('location')]",
-                        "dependsOn": [
-                            "[resourceId('Microsoft.Compute/virtualMachines', variables('SQL01Name'))]"
-                        ],
-                        "properties": {
-                            "publisher": "Microsoft.Powershell",
-                            "type": "DSC",
-                            "typeHandlerVersion": "2.19",
-                            "autoUpgradeMinorVersion": true,
-                            "settings": {
-                                "ModulesUrl": "[concat(parameters('_artifactsLocation'), '/DSC/ConfigureSQLServers.zip', parameters('_artifactsLocationSasToken'))]",
-                                "ConfigurationFunction": "ConfigureSQLServers.ps1\\ConfigureSQLServers",
-                                "Properties": {
-                                    "DomainName": "[parameters('domainName')]",
-                                    "VMRole": "SQLFirst",
-                                    "DC01IP": "[variables('DC01IP')]",
-                                    "DC02IP": "[variables('DC02IP')]",
-                                    "ClusterName": "[parameters('SQLClusterName')]",
-                                    "ClusterOwnerNode": "[variables('SQL01Name')]",
-                                    "ClusterIP": "[variables('SQLClusterIP')]",
-                                    "witnessStorageBlobEndPoint": "[concat('https://', variables('SQLClusterStorageWitnessName'), '.blob.core.windows.net')]",
-                                    "witnessStorageAccountKey": "[Concat('DefaultEndpointsProtocol=https;AccountName=',variables('SQLClusterStorageWitnessName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('SQLClusterStorageWitnessName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]",
-                                    "AdminCreds": {
-                                        "UserName": "[parameters('adminUsername')]",
-                                        "Password": "PrivateSettingsRef:AdminPassword"
-                                    },
-                                    "SQLCreds": {
-                                        "UserName": "svc_sql",
-                                        "Password": "PrivateSettingsRef:AdminPassword"
-                                    }
-                                }
-                            },
-                            "protectedSettings": {
-                                "Items": {
-                                    "AdminPassword": "[parameters('adminPassword')]"
-                                }
+                }
+            }, 
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "ConfigureFirstSQL",
+                    "apiVersion": "2017-03-30",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('SQL01Name'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.19",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "ModulesUrl": "[concat(parameters('_artifactsLocation'), '/DSC/ConfigureFirstSQL.zip', parameters('_artifactsLocationSasToken'))]",
+                            "ConfigurationFunction": "ConfigureFirstSQL.ps1\\ConfigureFirstSQL",
+                            "Properties": {
+                                "DomainName": "[parameters('domainName')]",
+                                "VMRole": "FirstSQL",
+                                "VMName": "[variables('SQL01Name')]",
+                                "DC01IP": "[variables('DC01IP')]",
+                                "DC02IP": "[variables('DC02IP')]",
+                                "SiteCIDR": "[variables('VnetCIDRaddressPrefix')]",
+                                "AdminCreds": {
+                                    "UserName": "[parameters('adminUsername')]",
+                                    "Password": "PrivateSettingsRef:AdminPassword"
+                                }, 
+                                "SQLServiceCreds": {
+                                    "UserName": "SQLAdmin",
+                                    "Password": "PrivateSettingsRef:AdminPassword"
+                                },  
+                                "ClusterName": "[parameters('SQLClusterName')]",
+                                "ClusterOwnerNode": "[variables('SQL01Name')]",
+                                "ClusterIP": "[variables('SQLClusterIP')]",
+                                "witnessStorageName": "[variables('SQLClusterStorageWitnessName')]",
+                                "witnessStorageBlobEndPoint": "[concat('https://', variables('SQLClusterStorageWitnessName'), '.blob.core.windows.net')]",
+                                "witnessStorageAccountKey": "[Concat('DefaultEndpointsProtocol=https;AccountName=',variables('SQLClusterStorageWitnessName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('SQLClusterStorageWitnessName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]"
+                            }
+                        },
+                        "protectedSettings": {
+                            "Items": {
+                                "AdminPassword": "[parameters('adminPassword')]"
                             }
                         }
                     }
-                ]
+                }
+            ]
+        },
+        {
+            "apiVersion": "2018-04-01",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[concat(variables('SQLRepName'), copyindex(2))]",
+            "location": "[parameters('location')]",
+            "copy": {
+                "name": "SQLLoop",
+                "count": "[parameters('SQLReplicas')]"
+            },
+            "tags": {
+                "owner": "[parameters('ownerTag')]",
+                "application": "[parameters('applicationTag')]",
+                "environment": "[parameters('environmentTag')]",
+                "criticality": "[parameters('criticalityTag')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/', variables('diagnosticStorageAccountName'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('SQLRepName'), copyindex(2), '-nic'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', variables('SQL01Name'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('SQLSize')]"
+                },
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', 'SQL-AVset01')]"
+                },
+                "osProfile": {
+                    "computerName": "[concat(variables('SQLRepName'), copyindex(2))]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftSQLServer",
+                        "offer": "SQL2017-WS2016",
+                        "sku": "Enterprise",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('SQLRepName'), copyindex(2), '-OSDisk')]",
+                        "osType": "Windows",
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "StandardSSD_LRS"
+                        },
+                        "caching": "ReadWrite"
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "[concat(variables('SQLRepName'), copyindex(2), '-DataDisk')]",
+                            "caching": "None",
+                            "createOption": "Empty",
+                            "diskSizeGB": 20,
+                            "managedDisk": {
+                                "storageAccountType": "StandardSSD_LRS"
+                            },
+                            "lun": 0
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('SQLRepName'), copyindex(2), '-nic'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('diagnosticStorageAccountName'))).primaryEndpoints.blob]"
+                    }
+                }
             }
         }
     ],
