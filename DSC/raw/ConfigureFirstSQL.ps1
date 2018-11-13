@@ -35,6 +35,13 @@ configuration ConfigureFirstSQL
         [Parameter(Mandatory=$true)]
         [String]$witnessStorageAccountKey,
 
+        [Parameter(Mandatory=$true)]
+        [String]$DC01IP,
+
+        [Parameter(Mandatory=$true)]
+        [String]$SiteCIDR,
+
+
         [Int]$RetryCount=20,
         [Int]$RetryIntervalSec=30
     )
