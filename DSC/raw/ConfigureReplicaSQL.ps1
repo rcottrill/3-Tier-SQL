@@ -105,7 +105,7 @@ configuration ConfigureReplicaSQL
         {
              DiskId = 2
              DriveLetter = 'F'
-             DependsOn = "[WaitForDisk]Disk2"
+             DependsOn = "[xWaitForDisk]Disk2"
              FSLabel = 'SQLData'
         }
 
@@ -285,21 +285,21 @@ configuration ConfigureReplicaSQL
             Type = 'Directory'
             DestinationPath = 'F:\Microsoft SQL Server\DB'
             Ensure = "Present"
-            DependsOn = "[Disk]ADDataDisk"
+            DependsOn = "[xDisk]ADDataDisk"
         }
 
         File Logs {
             Type = 'Directory'
             DestinationPath = 'F:\Microsoft SQL Server\Logs'
             Ensure = "Present"
-            DependsOn = "[Disk]ADDataDisk"
+            DependsOn = "[xDisk]ADDataDisk"
         }
 
         File Backup {
             Type = 'Directory'
             DestinationPath = 'F:\Microsoft SQL Server\BackUp'
             Ensure = "Present"
-            DependsOn = "[Disk]ADDataDisk"
+            DependsOn = "[xDisk]ADDataDisk"
         }
 
         xSMBShare DBBackupShare
@@ -355,16 +355,6 @@ configuration ConfigureReplicaSQL
                 DependsOn               = "[xSMBShare]DBBackupShare"
             }
 
-
-               SqlDatabaseOwner SetSQLAdmin
-        {
-            Name                 = "$($DomainName.split('.')[0])\$($SQLServiceCreds.UserName)"
-            Database             = 'Ha-Sample-DB'
-            ServerName           = $VMName
-            InstanceName         = 'MSSQLSERVER'
-            PsDscRunAsCredential = $DomainCreds
-            DependsOn               = "[SqlDatabase]CreateDemoDB"
-        }
 
         xWaitForCluster WaitForCluster
         {

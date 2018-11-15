@@ -119,7 +119,7 @@ configuration ConfigureFirstSQL
         {
              DiskId = 2
              DriveLetter = 'F'
-             DependsOn = "[WaitForDisk]Disk2"
+             DependsOn = "[xWaitForDisk]Disk2"
              FSLabel = 'SQLData'
         }
 
@@ -237,21 +237,21 @@ configuration ConfigureFirstSQL
             Type = 'Directory'
             DestinationPath = 'F:\Microsoft SQL Server\DB'
             Ensure = "Present"
-            DependsOn = "[Disk]ADDataDisk"
+            DependsOn = "[xDisk]ADDataDisk"
         }
 
         File Logs {
             Type = 'Directory'
             DestinationPath = 'F:\Microsoft SQL Server\Logs'
             Ensure = "Present"
-            DependsOn = "[Disk]ADDataDisk"
+            DependsOn = "[xDisk]ADDataDisk"
         }
 
         File Backup {
             Type = 'Directory'
             DestinationPath = 'F:\Microsoft SQL Server\BackUp'
             Ensure = "Present"
-            DependsOn = "[Disk]ADDataDisk"
+            DependsOn = "[xDisk]ADDataDisk"
         }
 
         xSMBShare DBBackupShare
