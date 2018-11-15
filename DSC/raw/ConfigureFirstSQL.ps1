@@ -46,7 +46,7 @@ configuration ConfigureFirstSQL
         [Int]$RetryIntervalSec=30
     )
 
-    Import-DscResource -ModuleName PSDesiredStateConfiguration,xDnsServer, xDatabase, StorageDSC, ComputerManagementDsc,xPendingReboot, xSmbShare, NetworkingDsc, xActiveDirectory, xFailoverCluster, SqlServer, SqlServerDsc
+    Import-DscResource -ModuleName PSDesiredStateConfiguration,xDnsServer, xDatabase, StorageDSC, ComputerManagementDsc,xPendingReboot, xSmbShare, NetworkingDsc, xActiveDirectory, xFailoverCluster, SqlServer, SqlServerDsc, xStorage
    [System.Management.Automation.PSCredential ]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
    [System.Management.Automation.PSCredential ]$LocalCreds = New-Object System.Management.Automation.PSCredential ("${VMName}\$($Admincreds.UserName)", $Admincreds.Password)
    [System.Management.Automation.PSCredential ]$SQLCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($SQLServiceCreds.UserName)", $Admincreds.Password)
