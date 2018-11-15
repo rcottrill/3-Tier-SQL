@@ -108,18 +108,19 @@ configuration ConfigureFirstSQL
             RetryIntervalSec = $RetryIntervalSec
         }
 
-        WaitForDisk Disk2
+      xWaitForDisk Disk2
         {
              DiskId = 2
              RetryIntervalSec = $RetryIntervalSec
              RetryCount = $RetryCount
         }
 
-        Disk ADDataDisk
+        xDisk ADDataDisk
         {
              DiskId = 2
              DriveLetter = 'F'
              DependsOn = "[WaitForDisk]Disk2"
+             FSLabel = 'SQLData'
         }
 
 
