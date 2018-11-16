@@ -446,15 +446,11 @@ configuration ConfigureReplicaSQL
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null 
 $srv = new-object ('Microsoft.SqlServer.Management.Smo.Server') "$($Using:VMName)" 
 
-# Create database backup  
+
 Backup-SqlDatabase -Database $DB -BackupFile "$BackupoLoc\$DB.bak" -ServerInstance $Using:ClusterOwnerNode -Credential $LocalCreds2
-# Create log backup  
 Backup-SqlDatabase -Database $DB -BackupAction "Log" -BackupFile "$BackupoLoc\$DB.trn" -ServerInstance $Using:ClusterOwnerNode -Credential $LocalCreds2
-# Restore database backup   
 Restore-SqlDatabase -Database $DB -BackupFile "$BackupoLoc\$DB.bak" -NoRecovery -ServerInstance $Using:VMName -ReplaceDatabase -Credential $LocalCreds2
-# Restore log backup   
-Restore-SqlDatabase -Database $DB -BackupFile  "$BackupoLoc\$DB.trn" -RestoreAction "Log"  –ServerInstance $Using:VMName -NoRecovery -Credential $LocalCreds2
-   
+Restore-SqlDatabase -Database $DB -BackupFile  "$BackupoLoc\$DB.trn" -RestoreAction "Log" -ServerInstance $Using:VMName -NoRecovery -Credential $LocalCreds2
    
 
             }
