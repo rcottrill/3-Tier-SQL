@@ -487,12 +487,12 @@ Script EnableDBRepPart2
            Resume-SqlAvailabilityDatabase -Path $PathDB -Confirm:$False
         }
 
-             Invoke-Command -ComputerName $VMName -v -ScriptBlock $sb -ArgumentList $VMName,$ClusterOwner,$Cluster
+             Invoke-Command -ComputerName $VMName -ScriptBlock $sb -ArgumentList $VMName,$ClusterOwner,$Cluster
 
             }
 
             TestScript = {
-                $PathAGRep = "SQLSERVER:\SQL\$($Using:ClusterOwnerNode)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityReplicas\$($Using:VMName)"
+                $PathAGRep = "SQLSERVER:\SQL\$($Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityReplicas\$($Using:VMName)"
                 $TestRep = Test-SqlAvailabilityReplica -Path $PathAGRep
                 $TestRep.HealthState -eq "Healthy"
             }
