@@ -476,8 +476,8 @@ Script EnableDBRepPart2
              
              
              $DB = "Ha-Sample-DB"
-             $PathAG = "SQLSERVER:\SQL\$(Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)"
-             $PathDB = "SQLSERVER:\SQL\$(Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityDatabases\$($DB)"
+             $PathAG = "SQLSERVER:\SQL\$($Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)"
+             $PathDB = "SQLSERVER:\SQL\$($Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityDatabases\$($DB)"
 
            Add-SqlAvailabilityDatabase -Path $PathAG -Database $DB -Confirm:$False
            Resume-SqlAvailabilityDatabase -Path $PathDB -Confirm:$False
