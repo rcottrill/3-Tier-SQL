@@ -439,13 +439,12 @@ configuration ConfigureReplicaSQL
 
              $DB = "Ha-Sample-DB"
 
-             $PathAG = "SQLSERVER:\SQL\SQLVM-02\DEFAULT\AvailabilityGroups\SQLCLuster"
+             $PathAG = "SQLSERVER:\SQL\$($Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)"
              $PathDB = "SQLSERVER:\SQL\$($Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityDatabases\$($DB)"
              $BackupoLoc = "\\$($Using:ClusterOwnerNode)\DBBackup"
 
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null 
 $srv = new-object ('Microsoft.SqlServer.Management.Smo.Server') "$($Using:VMName)" 
-
 
 # Create database backup  
 Backup-SqlDatabase -Database $DB -BackupFile "$BackupoLoc\$DB.bak" -ServerInstance $Using:ClusterOwnerNode -Credential $LocalCreds2
@@ -461,7 +460,7 @@ Restore-SqlDatabase -Database $DB -BackupFile  "$BackupoLoc\$DB.trn" -RestoreAct
             }
 
             TestScript = {
-                $PathAGRep = "SQLSERVER:\SQL\SQLVM-02\DEFAULT\AvailabilityGroups\SQLCLuster\AvailabilityReplicas\SQLVM-02"
+                $PathAGRep = "SQLSERVER:\SQL\$($Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityReplicas\$($Using:VMName)"
                 $TestRep = Test-SqlAvailabilityReplica -Path $PathAGRep
                 $TestRep.HealthState -eq "Healthy"
             }
@@ -479,21 +478,25 @@ Script EnableDBRepPart2
 
             SetScript = {
              
-             Invoke-Command -ComputerName SQLVM-02 -ScriptBlock {
-             
-             $DB = "Ha-Sample-DB"
-             $PathAG = "SQLSERVER:\SQL\SQLVM-02\DEFAULT\AvailabilityGroups\SQLCluster"
-             $PathDB = "SQLSERVER:\SQL\SQLVM-02\DEFAULT\AvailabilityGroups\SQLCluster\AvailabilityDatabases\$($DB)"
+             $VMName = $Using:VMName
+             $ClusterOwner = $Using:ClusterOwnerNode
+             $Cluster = $Using:ClusterName
 
+             $sb = {
+             $DB = "Ha-Sample-DB"
+             $PathAG = "SQLSERVER:\SQL\$($VMName)\DEFAULT\AvailabilityGroups\$($Cluster)"
+             $PathDB = "SQLSERVER:\SQL\$($VMName)\DEFAULT\AvailabilityGroups\$($Cluster)\AvailabilityDatabases\$($DB)"
 
            Add-SqlAvailabilityDatabase -Path $PathAG -Database $DB -Confirm:$False
            Resume-SqlAvailabilityDatabase -Path $PathDB -Confirm:$False
         }
 
+             Invoke-Command -ComputerName $VMName -v -ScriptBlock $sb -ArgumentList $VMName,$ClusterOwner,$Cluster
+
             }
 
             TestScript = {
-                $PathAGRep = "SQLSERVER:\SQL\SQLVM-02\DEFAULT\AvailabilityGroups\SQLCLuster\AvailabilityReplicas\SQLVM-02"
+                $PathAGRep = "SQLSERVER:\SQL\$($Using:ClusterOwnerNode)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityReplicas\$($Using:VMName)"
                 $TestRep = Test-SqlAvailabilityReplica -Path $PathAGRep
                 $TestRep.HealthState -eq "Healthy"
             }
