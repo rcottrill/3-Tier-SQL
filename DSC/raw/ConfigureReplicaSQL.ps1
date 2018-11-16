@@ -451,9 +451,9 @@ Backup-SqlDatabase -Database $DB -BackupFile "$BackupoLoc\$DB.bak" -ServerInstan
 # Create log backup  
 Backup-SqlDatabase -Database $DB -BackupAction "Log" -BackupFile "$BackupoLoc\$DB.trn" -ServerInstance $Using:ClusterOwnerNode -Credential $LocalCreds2
 # Restore database backup   
-Restore-SqlDatabase -Database $DB -BackupFile "$BackupoLoc\$DB.bak" -NoRecovery -ServerInstance "$($Using:VMName)" -ReplaceDatabase -Credential $LocalCreds2
+Restore-SqlDatabase -Database $DB -BackupFile "$BackupoLoc\$DB.bak" -NoRecovery -ServerInstance $Using:VMName -ReplaceDatabase -Credential $LocalCreds2
 # Restore log backup   
-Restore-SqlDatabase -Database $DB -BackupFile  "$BackupoLoc\$DB.trn" -RestoreAction "Log" -NoRecovery –ServerInstance "$($Using:VMName)" -Credential $LocalCreds2
+Restore-SqlDatabase -Database $DB -BackupFile  "$BackupoLoc\$DB.trn" -RestoreAction "Log"  –ServerInstance $Using:VMName -NoRecovery -Credential $LocalCreds2
    
    
 
@@ -500,7 +500,6 @@ Script EnableDBRepPart2
                 $TestRep = Test-SqlAvailabilityReplica -Path $PathAGRep
                 $TestRep.HealthState -eq "Healthy"
             }
-
             DependsOn = "[Script]EnableDBRep"
             PsDscRunAsCredential = $SQLCreds
         }
