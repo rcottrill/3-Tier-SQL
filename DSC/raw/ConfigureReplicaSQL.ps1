@@ -474,21 +474,14 @@ Script EnableDBRepPart2
 
             SetScript = {
              
-             $VMName = $Using:VMName
-             $ClusterOwner = $Using:ClusterOwnerNode
-             $Cluster = $Using:ClusterName
-
-             $sb = {
+             
              $DB = "Ha-Sample-DB"
-             $PathAG = "SQLSERVER:\SQL\$($VMName)\DEFAULT\AvailabilityGroups\$($Cluster)"
-             $PathDB = "SQLSERVER:\SQL\$($VMName)\DEFAULT\AvailabilityGroups\$($Cluster)\AvailabilityDatabases\$($DB)"
+             $PathAG = "SQLSERVER:\SQL\$(Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)"
+             $PathDB = "SQLSERVER:\SQL\$(Using:VMName)\DEFAULT\AvailabilityGroups\$($Using:ClusterName)\AvailabilityDatabases\$($DB)"
 
            Add-SqlAvailabilityDatabase -Path $PathAG -Database $DB -Confirm:$False
            Resume-SqlAvailabilityDatabase -Path $PathDB -Confirm:$False
-        }
-
-             Invoke-Command -ComputerName $VMName -ScriptBlock $sb -ArgumentList $VMName,$ClusterOwner,$Cluster
-
+        
             }
 
             TestScript = {
